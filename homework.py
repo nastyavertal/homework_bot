@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -40,12 +40,9 @@ def send_message(bot, message):
     """Отправка сообщений боту."""
     try:
         bot.sent_message(TELEGRAM_CHAT_ID, text=message)
+        return message
     except Exception as error:
-        error_message = f'Error sending message: {error}'
-        logger.error(message)
-        if error_message not in LIST_ERRORS:
-            send_message(bot, error_message)
-            LIST_ERRORS.append(error_message)
+        logger.error(f'Error sending message: {error}')
 
 
 def get_api_answer(current_timestamp):
@@ -60,14 +57,17 @@ def get_api_answer(current_timestamp):
             raise Exception(message)
         return response.json()
     except requests.exceptions.RequestException:
-        logger.error('Endpoint is unavailable')
-        raise Exception('Endpoint is unavailable')
+        error_message = 'Endpoint is unavailable'
+        logger.error(error_message)
+        raise Exception(error_message)
     except JSONDecodeError:
-        logger.error('JSON conversion error')
-        raise Exception('JSON conversion error')
+        error_message = 'JSON conversion error'
+        logger.error(error_message)
+        raise Exception(error_message)
     except Exception as error:
-        logger.error(f'API error: {error}')
-        raise Exception(f'API error: {error}')
+        error_message = f'API error: {error}'
+        logger.error(error_message)
+        raise Exception(error_message)
     finally:
         logger.info('Function: get_api answer')
 
@@ -75,33 +75,38 @@ def get_api_answer(current_timestamp):
 def check_response(response):
     """Проверяет ответ API на корректность."""
     if not isinstance(response, dict):
-        logger.error('API is not a dictionary')
-        raise TypeError('API is not a dictionary')
+        error_message = 'API is not a dictionary'
+        logger.error(error_message)
+        raise TypeError(error_message)
     if 'homeworks' not in response.keys():
-        logger.error('There is no key homeworks')
-        raise KeyError('There is no key homeworks')
+        error_message = 'There is no key homeworks'
+        logger.error(error_message)
+        raise KeyError(error_message)
     if not isinstance(response.get('homeworks'), list):
-        logger.error('API is not a list')
-        raise TypeError('API is not a list')
+        error_message = 'API is not a list'
+        logger.error(error_message)
+        raise TypeError(error_message)
     return response.get('homeworks')
 
 
 def parse_status(homework):
-    """Извлекает из конкретной домашней работе статус этой работы."""
+    """Извлекает из конкретной домашней работы  статус этой работы."""
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
+    if homework_status not in HOMEWORK_VERDICTS.keys():
+        error_message = 'Unknown homework status'
+        logger.error(error_message)
+        raise KeyError(error_message)
 
-    verdict = HOMEWORK_STATUSES[homework_status]
+    verdict = HOMEWORK_VERDICTS[homework_status]
 
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
     """Проверяет доступность перемeнных окружения."""
-    if TELEGRAM_TOKEN is None or PRACTICUM_TOKEN is None or \
-            TELEGRAM_CHAT_ID is None:
-        return False
-    return True
+    tokens = all([TELEGRAM_TOKEN, PRACTICUM_TOKEN, TELEGRAM_CHAT_ID])
+    return tokens
 
 
 def main():
@@ -109,6 +114,7 @@ def main():
     if not check_tokens():
         error_message = 'Token verification failed'
         logger.error(error_message)
+        raise SystemExit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
     current_timestamp = int(time.time())
@@ -129,7 +135,6 @@ def main():
             if error_message not in LIST_ERRORS:
                 send_message(bot, error_message)
                 LIST_ERRORS.append(error_message)
-            time.sleep(RETRY_TIME)
             time.sleep(RETRY_TIME)
 
 
