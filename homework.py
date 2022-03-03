@@ -39,8 +39,8 @@ HOMEWORK_VERDICTS = {
 def send_message(bot, message):
     """Отправка сообщений боту."""
     try:
-        bot.sent_message(TELEGRAM_CHAT_ID, text=message)
-        return message
+        bot.send_message(TELEGRAM_CHAT_ID, text=message)
+        return True
     except Exception as error:
         logger.error(f'Error sending message: {error}')
 
@@ -68,8 +68,6 @@ def get_api_answer(current_timestamp):
         error_message = f'API error: {error}'
         logger.error(error_message)
         raise Exception(error_message)
-    finally:
-        logger.info('Function: get_api answer')
 
 
 def check_response(response):
@@ -132,10 +130,12 @@ def main():
         except Exception as error:
             error_message = f'Program crash: {error}'
             logger.error(error_message)
-            if error_message not in LIST_ERRORS:
-                send_message(bot, error_message)
-                LIST_ERRORS.append(error_message)
-            time.sleep(RETRY_TIME)
+            result = send_message(bot, error_message)
+            if result:
+                if error_message not in LIST_ERRORS:
+                    send_message(bot, error_message)
+                    LIST_ERRORS.append(error_message)
+                time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
