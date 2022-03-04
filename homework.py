@@ -130,10 +130,10 @@ def main():
         except Exception as error:
             error_message = f'Program crash: {error}'
             logger.error(error_message)
-            result = send_message(bot, error_message)
-            if result:
-                if error_message not in LIST_ERRORS:
-                    send_message(bot, error_message)
+
+            if error_message not in LIST_ERRORS:
+                result = send_message(bot, error_message)
+                if result:
                     LIST_ERRORS.append(error_message)
                 time.sleep(RETRY_TIME)
 
